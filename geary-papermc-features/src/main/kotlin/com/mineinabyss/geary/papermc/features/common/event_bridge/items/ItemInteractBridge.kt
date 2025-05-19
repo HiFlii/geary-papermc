@@ -14,6 +14,9 @@ import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.player.PlayerInteractEntityEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemHeldEvent
+import org.bukkit.event.player.PlayerSwapHandItemsEvent
+import org.bukkit.event.player.PlayerToggleSneakEvent
 
 @Serializable
 @SerialName("geary:item_interact")
@@ -40,6 +43,19 @@ class OnItemRightClickBlock
 @Serializable
 @SerialName("geary:item_right_click_entity")
 class OnItemRightClickEntity
+
+@Serializable
+@SerialName("geary:item_swap_in")
+class OnItemSwapIn
+
+@Serializable
+@SerialName("geary:item_swap_out")
+class OnItemSwapOut
+
+@Serializable
+@SerialName("geary:item_sneak")
+class OnItemSneak
+
 
 class ItemInteractBridge : Listener {
     private val rightClickCooldowns = Int2IntOpenHashMap()
@@ -69,5 +85,33 @@ class ItemInteractBridge : Listener {
         if (leftClicked) heldItem.emit<OnItemLeftClickBlock>()
         if (rightClicked) heldItem.emit<OnItemRightClick>()
         if (action == Action.RIGHT_CLICK_BLOCK) heldItem.emit<OnItemRightClickBlock>()
+    }
+
+    @EventHandler
+    fun PlayerItemHeldEvent.onItemSwap() {
+        val inventory = player.inventory.toGeary()
+        inventory?.get(newSlot)?.emit<OnItemSwapIn>()
+        inventory?.get(previousSlot)?.emit<OnItemSwapOut>()
+    }
+
+    @EventHandler
+    fun PlayerSwapHandItemsEvent.onItemSwap() {
+        val inventory = player.inventory.toGeary()
+        val mainHand = inventory?.itemInMainHand
+        val offHand = inventory?.itemInOffhand
+
+        // Emit both swaps for the items
+
+        mainHand?.emit<OnItemSwapIn>()
+        mainHand?.emit<OnItemSwapOut>()
+        offHand?.emit<OnItemSwapIn>()
+        offHand?.emit<OnItemSwapOut>()
+    }
+
+    @EventHandler
+    fun PlayerToggleSneakEvent.onItemSneak() {
+        if (player.isSneaking) {
+            player.inventory.toGeary()?.itemInBoots?.emit<OnItemSneak>()
+        }
     }
 }
